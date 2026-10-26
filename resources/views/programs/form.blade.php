@@ -1,0 +1,22 @@
+@extends('layouts.app')
+@section('title', $program->exists ? 'Edit program' : 'Create a program')
+@section('content')
+<section class="section dashboard-section"><div class="container form-page-container"><a class="back-link" href="{{ route('public.programs') }}">← Back to programs</a><div class="form-page-heading"><span class="eyebrow">Program details</span><h1>{{ $program->exists ? 'Edit program' : 'Create a program' }}</h1><p>Share the details people need to understand and join your initiative.</p></div>
+    <form method="POST" enctype="multipart/form-data" action="{{ $program->exists ? route('programs.update', $program) : route('programs.store') }}" class="panel editor-form">
+        @csrf @if($program->exists) @method('PUT') @endif
+        <div class="form-section-label">The basics</div>
+        <label class="field"><span>Program title <b>*</b></span><input type="text" name="title" value="{{ old('title', $program->title) }}" maxlength="160" required></label>
+        <div class="field-row"><label class="field"><span>Category <b>*</b></span><select name="category" required><option value="">Choose a category</option>@foreach(['Education','Health & Wellness','Environment','Sports & Recreation','Livelihood','Arts & Culture','Community Service','Other'] as $category)<option value="{{ $category }}" @selected(old('category', $program->category) === $category)>{{ $category }}</option>@endforeach</select></label><label class="field"><span>Venue</span><input type="text" name="venue" value="{{ old('venue', $program->venue) }}" maxlength="255" placeholder="Where will it happen?"></label></div>
+        <label class="field"><span>Description <b>*</b></span><textarea name="description" rows="5" required maxlength="10000" placeholder="What is this program about?">{{ old('description', $program->description) }}</textarea></label>
+        <label class="field"><span>Objectives</span><textarea name="objectives" rows="3" maxlength="5000" placeholder="What do you hope participants will gain?">{{ old('objectives', $program->objectives) }}</textarea></label>
+        <div class="form-section-label">Schedule and registration</div>
+        <div class="field-row"><label class="field"><span>Starts <b>*</b></span><input type="datetime-local" name="starts_at" value="{{ old('starts_at', $program->starts_at?->format('Y-m-d\TH:i')) }}" required></label><label class="field"><span>Ends <b>*</b></span><input type="datetime-local" name="ends_at" value="{{ old('ends_at', $program->ends_at?->format('Y-m-d\TH:i')) }}" required></label></div>
+        <div class="field-row"><label class="field"><span>Registration deadline</span><input type="datetime-local" name="registration_deadline" value="{{ old('registration_deadline', $program->registration_deadline?->format('Y-m-d\TH:i')) }}"></label><label class="field"><span>Maximum participants</span><input type="number" name="capacity" min="1" max="100000" value="{{ old('capacity', $program->capacity) }}" placeholder="No limit"></label></div>
+        <label class="field"><span>Registration requirements</span><textarea name="requirements" rows="3" maxlength="5000" placeholder="Who can join? Any materials to bring?">{{ old('requirements', $program->requirements) }}</textarea></label>
+        <div class="form-section-label">Publish</div>
+        <div class="field-row"><label class="field"><span>Program status <b>*</b></span><select name="status" required>@foreach(['draft','published','completed','archived'] as $status)<option value="{{ $status }}" @selected(old('status', $program->status ?: 'draft') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></label><label class="field"><span>Featured image</span><input type="file" name="image" accept="image/*" data-image-input><small class="form-note">JPG, PNG, or WebP up to 5 MB.</small><img class="image-preview" data-image-preview alt="Image preview" @if($program->image_path) src="{{ Storage::disk('public')->url($program->image_path) }}" @else hidden @endif></label></div>
+        <label class="check-field"><input type="checkbox" name="is_public" value="1" @checked(old('is_public', $program->is_public))><span>Show on public community pages (only published programs are visible)</span></label>
+        <div class="form-actions"><a class="button button-outline" href="{{ route('public.programs') }}">Cancel</a><button class="button" type="submit">{{ $program->exists ? 'Save changes' : 'Create program' }}</button></div>
+    </form>
+</div></section>
+@endsection
