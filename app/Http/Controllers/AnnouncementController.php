@@ -22,12 +22,17 @@ class AnnouncementController extends Controller
             'search' => ['nullable', 'string', 'max:180'],
             'status' => ['nullable', 'in:draft,published'],
         ]);
-        $announcements = Announcement::where('workspace_id', $request->user()->workspace_id)
+        $workspaceAnnouncements = Announcement::where('workspace_id', $request->user()->workspace_id);
+        $announcements = (clone $workspaceAnnouncements)
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('title', 'like', '%'.$search.'%'))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->latest()->paginate(10)->withQueryString();
+        $statusCounts = (clone $workspaceAnnouncements)->selectRaw('status, count(*) as total')
+            ->groupBy('status')->pluck('total', 'status');
+        $publicCount = (clone $workspaceAnnouncements)->where('status', 'published')->where('is_public', true)
+            ->whereNotNull('published_at')->where('published_at', '<=', now())->count();
 
-        return view('announcements.index', compact('announcements'));
+        return view('announcements.index', compact('announcements', 'statusCounts', 'publicCount'));
     }
 
     public function create(Request $request)

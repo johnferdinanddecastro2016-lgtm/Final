@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Announcement;
+use App\Models\Event;
 use App\Models\Program;
 use App\Models\ProgramRegistration;
 use App\Models\User;
@@ -83,6 +85,22 @@ class ProgramHubTest extends TestCase
         Notification::assertSentTo($user, VerifyEmail::class);
     }
 
+    public function test_logout_redirects_home_and_clears_the_authenticated_session(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('logout'))
+            ->assertRedirect(route('home'));
+
+        $this->assertGuest();
+    }
+
+    public function test_opening_logout_url_does_not_show_a_method_not_allowed_error(): void
+    {
+        $this->get('/logout')->assertRedirect(route('home'));
+    }
+
     public function test_pending_council_accounts_cannot_create_programs(): void
     {
         $workspace = $this->workspace('Riverside');
@@ -126,6 +144,78 @@ class ProgramHubTest extends TestCase
             'is_public' => 1,
         ]);
         $this->get(route('dashboard'))->assertOk()->assertSee('Youth Leadership Workshop');
+    }
+
+    public function test_workspace_lists_filter_events_and_announcements_without_leaking_other_tenants(): void
+    {
+        $workspace = $this->workspace('Riverside');
+        $otherWorkspace = $this->workspace('Hilltop');
+        $member = User::factory()->create([
+            'workspace_id' => $workspace->id,
+            'role' => 'workspace_owner',
+            'account_status' => 'active',
+        ]);
+        Event::create([
+            'workspace_id' => $workspace->id,
+            'title' => 'Published youth forum',
+            'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addHour(),
+            'status' => 'published',
+            'is_public' => true,
+        ]);
+        Event::create([
+            'workspace_id' => $workspace->id,
+            'title' => 'Draft planning session',
+            'starts_at' => now()->addDays(3),
+            'ends_at' => now()->addDays(3)->addHour(),
+            'status' => 'draft',
+            'is_public' => false,
+        ]);
+        Event::create([
+            'workspace_id' => $otherWorkspace->id,
+            'title' => 'Another council private event',
+            'starts_at' => now()->addDays(4),
+            'ends_at' => now()->addDays(4)->addHour(),
+            'status' => 'draft',
+        ]);
+        Announcement::create([
+            'workspace_id' => $workspace->id,
+            'title' => 'Published community update',
+            'slug' => 'published-community-update',
+            'body' => 'A useful update for residents.',
+            'status' => 'published',
+            'is_public' => true,
+            'published_at' => now(),
+        ]);
+        Announcement::create([
+            'workspace_id' => $workspace->id,
+            'title' => 'Internal draft update',
+            'slug' => 'internal-draft-update',
+            'body' => 'This draft is not public.',
+            'status' => 'draft',
+            'is_public' => false,
+        ]);
+        Announcement::create([
+            'workspace_id' => $otherWorkspace->id,
+            'title' => 'Other council private update',
+            'slug' => 'other-council-private-update',
+            'body' => 'Another tenant draft.',
+            'status' => 'draft',
+            'is_public' => false,
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('events.index', ['status' => 'draft']))
+            ->assertOk()
+            ->assertSee('Draft planning session')
+            ->assertDontSee('<h3>Published youth forum</h3>', false)
+            ->assertDontSee('Another council private event');
+
+        $this->get(route('announcements.index', ['status' => 'draft']))
+            ->assertOk()
+            ->assertSee('Internal draft update')
+            ->assertDontSee('Published community update')
+            ->assertDontSee('Other council private update');
     }
 
     public function test_same_barangay_name_in_different_municipalities_is_allowed(): void

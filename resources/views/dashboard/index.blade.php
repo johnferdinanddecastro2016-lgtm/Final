@@ -37,6 +37,18 @@
         </section>
     </div>
     <section class="quick-actions"><div><span class="eyebrow">Keep the momentum going</span><h2>Quick actions</h2></div><a href="{{ route('programs.create') }}"><span>＋</span><b>Create a program</b><small>Plan your next initiative</small></a><a href="{{ route('events.index') }}"><span>◷</span><b>Add an event</b><small>Put it on the calendar</small></a><a href="{{ route('announcements.create') }}"><span>↗</span><b>Publish an update</b><small>Keep everyone informed</small></a></section>
+    <section class="panel activity-panel">
+        <div class="panel-heading"><div><span class="eyebrow">Your workspace</span><h2>Recent activity</h2></div></div>
+        @forelse($recentActivity as $activity)
+            <a class="activity-row" href="{{ $activity['url'] }}">
+                <span class="activity-marker activity-{{ strtolower($activity['kind']) }}"></span>
+                <span class="activity-copy"><b>{{ $activity['title'] }}</b><small>{{ $activity['detail'] }}</small></span>
+                <span class="activity-time">{{ $activity['at']->diffForHumans() }}</span>
+            </a>
+        @empty
+            <div class="panel-empty"><span>✦</span><b>Your activity will show up here</b><small>Create a program, schedule an event, or share a council update.</small></div>
+        @endforelse
+    </section>
     </div>
     </div>
 </div></section>

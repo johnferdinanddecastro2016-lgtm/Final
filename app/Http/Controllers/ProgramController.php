@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProgramRequest;
 use App\Models\Program;
+use App\Models\ProgramRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -39,12 +40,16 @@ class ProgramController extends Controller
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('title', 'like', '%'.$search.'%'))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
-            ->latest()->paginate(10)->withQueryString();
+            ->withCount('registrations')->latest()->paginate(10)->withQueryString();
 
-        $categories = Program::where('workspace_id', $request->user()->workspace_id)
+        $workspacePrograms = Program::where('workspace_id', $request->user()->workspace_id);
+        $categories = (clone $workspacePrograms)
             ->distinct()->orderBy('category')->pluck('category');
+        $statusCounts = (clone $workspacePrograms)->selectRaw('status, count(*) as total')
+            ->groupBy('status')->pluck('total', 'status');
+        $registrationTotal = ProgramRegistration::where('workspace_id', $request->user()->workspace_id)->count();
 
-        return view('programs.index', compact('programs', 'categories'));
+        return view('programs.index', compact('programs', 'categories', 'statusCounts', 'registrationTotal'));
     }
 
     public function create()

@@ -3,9 +3,21 @@
 @section('content')
 <section class="section dashboard-section"><div class="container dashboard-container">
     <div class="dashboard-heading"><div><span class="eyebrow">Council workspace</span><h1>Events</h1><p>Schedule local gatherings and keep your community in the loop.</p></div><a href="#event-form" class="button">＋ Add event</a></div>
-    <div class="dashboard-nav"><a href="{{ route('dashboard') }}">Overview</a><a href="{{ route('public.programs') }}">Programs</a><a class="active" href="{{ route('events.index') }}">Events</a><a href="{{ route('announcements.index') }}">Announcements</a></div>
+    <div class="dashboard-nav"><a href="{{ route('dashboard') }}">Overview</a><a href="{{ route('public.programs') }}">Programs</a><a class="active" href="{{ route('events.index') }}">Events</a><a href="{{ route('workspace.registrations.index') }}">Registrations</a><a href="{{ route('announcements.index') }}">Announcements</a></div>
+    <div class="list-overview">
+        <div class="list-overview-card"><span class="overview-icon overview-icon-blue">◷</span><span><small>All events</small><strong>{{ $statusCounts->sum() }}</strong></span></div>
+        <div class="list-overview-card"><span class="overview-icon overview-icon-green">↗</span><span><small>Published</small><strong>{{ $statusCounts->get('published', 0) }}</strong></span></div>
+        <div class="list-overview-card"><span class="overview-icon overview-icon-amber">▣</span><span><small>Drafts</small><strong>{{ $statusCounts->get('draft', 0) }}</strong></span></div>
+        <div class="list-overview-card"><span class="overview-icon overview-icon-violet">⌁</span><span><small>Upcoming</small><strong>{{ $upcomingCount }}</strong></span></div>
+    </div>
     <div class="calendar-panel panel"><div class="panel-heading"><div><span class="eyebrow">Workspace calendar</span><h2>Schedule overview</h2></div></div><div id="workspace-calendar" data-events="{{ $calendarEvents->toJson() }}"></div></div>
-    <div class="panel-heading listing-heading"><div><span class="eyebrow">All scheduled events</span><h2>Event list</h2></div></div>
+    <div class="panel-heading listing-heading"><div><span class="eyebrow">All scheduled events</span><h2>Event list</h2></div><a class="text-link" href="#event-form">＋ Add event</a></div>
+    <form method="GET" action="{{ route('events.index') }}" class="filter-bar panel">
+        <label class="search-field"><span class="sr-only">Search events</span><input type="search" name="search" value="{{ request('search') }}" placeholder="Search event title…"></label>
+        <label class="sr-only" for="event-status-filter">Filter by status</label><select id="event-status-filter" name="status"><option value="">All statuses</option>@foreach(['published','draft'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select>
+        <button class="button button-small" type="submit">Search</button>
+        @if(request()->hasAny(['search', 'status']))<a class="text-link" href="{{ route('events.index') }}">Clear</a>@endif
+    </form>
     @if($events->isNotEmpty())<div class="event-list event-list-admin">@foreach($events as $event)
         <article class="event-row"><div class="event-date"><strong>{{ $event->starts_at->format('d') }}</strong><span>{{ $event->starts_at->format('M') }}</span></div><div class="event-info"><span class="eyebrow">{{ $event->starts_at->format('l · g:i A') }}</span><h3>{{ $event->title }}</h3><p>{{ $event->venue ?: 'Venue not set' }} · {{ ucfirst($event->status) }}{{ $event->is_public ? ' · Public' : '' }}</p></div><div class="table-actions"><a href="{{ route('events.index', ['edit' => $event->id]) }}#event-form">Edit</a><form method="POST" action="{{ route('events.destroy', $event) }}" data-confirm="Delete this event?">@csrf @method('DELETE')<button class="danger-link" type="submit">Delete</button></form></div></article>
     @endforeach</div><div class="pagination-wrap">{{ $events->links() }}</div>@else<div class="empty-state panel"><span class="empty-icon">◷</span><h3>No events scheduled</h3><p>Create the first event and add it to your community calendar.</p></div>@endif

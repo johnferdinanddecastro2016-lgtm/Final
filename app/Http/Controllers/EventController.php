@@ -14,22 +14,28 @@ class EventController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:160'],
             'edit' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'in:draft,published'],
         ]);
-        $events = Event::where('workspace_id', $request->user()->workspace_id)
+        $workspaceEvents = Event::where('workspace_id', $request->user()->workspace_id);
+        $events = (clone $workspaceEvents)
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('title', 'like', '%'.$search.'%'))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->orderBy('starts_at')->paginate(15)->withQueryString();
-        $calendarEvents = Event::where('workspace_id', $request->user()->workspace_id)
+        $calendarEvents = (clone $workspaceEvents)
             ->get()->map(fn (Event $event) => [
                 'title' => $event->title,
                 'start' => $event->starts_at->toIso8601String(),
                 'end' => $event->ends_at->toIso8601String(),
                 'url' => route('events.index', ['edit' => $event->id]),
             ])->values();
+        $statusCounts = (clone $workspaceEvents)->selectRaw('status, count(*) as total')
+            ->groupBy('status')->pluck('total', 'status');
+        $upcomingCount = (clone $workspaceEvents)->where('starts_at', '>=', now())->count();
         $editingEvent = isset($filters['edit'])
             ? Event::where('workspace_id', $request->user()->workspace_id)->find($filters['edit'])
             : null;
 
-        return view('events.index', compact('events', 'calendarEvents', 'editingEvent'));
+        return view('events.index', compact('events', 'calendarEvents', 'editingEvent', 'statusCounts', 'upcomingCount'));
     }
 
     public function store(Request $request)

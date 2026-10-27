@@ -23,6 +23,38 @@ class DashboardController extends Controller
 
         $workspaceId = $user->workspace_id;
         $programs = Program::where('workspace_id', $workspaceId);
+        $activity = collect()
+            ->concat(Program::where('workspace_id', $workspaceId)->latest()->limit(4)->get()->map(fn (Program $program) => [
+                'kind' => 'Program',
+                'title' => $program->title,
+                'detail' => 'Program created · '.ucfirst($program->status),
+                'at' => $program->created_at,
+                'url' => route('programs.edit', $program),
+            ]))
+            ->concat(Event::where('workspace_id', $workspaceId)->latest()->limit(4)->get()->map(fn (Event $event) => [
+                'kind' => 'Event',
+                'title' => $event->title,
+                'detail' => 'Event added to the workspace calendar',
+                'at' => $event->created_at,
+                'url' => route('events.index', ['edit' => $event->id]),
+            ]))
+            ->concat(Announcement::where('workspace_id', $workspaceId)->latest()->limit(4)->get()->map(fn (Announcement $announcement) => [
+                'kind' => 'Announcement',
+                'title' => $announcement->title,
+                'detail' => 'Announcement · '.ucfirst($announcement->status),
+                'at' => $announcement->created_at,
+                'url' => route('announcements.edit', $announcement),
+            ]))
+            ->concat(ProgramRegistration::where('workspace_id', $workspaceId)->with('program')->latest()->limit(4)->get()->map(fn (ProgramRegistration $registration) => [
+                'kind' => 'Registration',
+                'title' => 'New program registration',
+                'detail' => $registration->program->title.' · '.ucfirst($registration->status),
+                'at' => $registration->created_at,
+                'url' => route('workspace.registrations.index'),
+            ]))
+            ->sortByDesc('at')
+            ->take(6)
+            ->values();
 
         return view('dashboard.index', [
             'user' => $user,
@@ -41,6 +73,7 @@ class DashboardController extends Controller
                 ->latest()->limit(4)->get(),
             'programStatusCounts' => (clone $programs)->selectRaw('status, count(*) as total')
                 ->groupBy('status')->pluck('total', 'status'),
+            'recentActivity' => $activity,
         ]);
     }
 }

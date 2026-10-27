@@ -3,8 +3,9 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 document.querySelectorAll('[data-menu-toggle]').forEach((button) => {
     button.addEventListener('click', () => {
         const expanded = button.getAttribute('aria-expanded') === 'true';
+        const menu = document.getElementById(button.getAttribute('aria-controls'));
         button.setAttribute('aria-expanded', String(!expanded));
-        document.querySelector(button.getAttribute('aria-controls'))?.classList.toggle('is-open', !expanded);
+        menu?.classList.toggle('is-open', !expanded);
     });
 });
 

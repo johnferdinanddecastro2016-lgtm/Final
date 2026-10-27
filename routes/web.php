@@ -21,6 +21,8 @@ Route::get('/registration/confirmation', [ProgramRegistrationController::class, 
 Route::get('/events', [PublicPageController::class, 'events'])->name('public.events');
 Route::get('/announcements', [AnnouncementController::class, 'index'])->name('public.announcements');
 
+Route::get('/logout', fn () => redirect()->route('home'))->name('logout.notice');
+
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('throttle:5,1');
